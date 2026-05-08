@@ -363,6 +363,57 @@ export interface ParlayOut {
   totalCandidates: number;
 }
 
+export interface SaveParlayInput {
+  date: string;
+  label: string;
+  legsJson: string;
+  jointProb: number;
+  combinedFairOdd: number;
+  confidenceLabel: string;
+  totalLegs: number;
+}
+
+export interface SaveParlayOut {
+  success: boolean;
+  parlayId: string;
+  id?: number;
+}
+
+export interface ParlayHistoryItem {
+  id: number;
+  parlayId: string;
+  date: string;
+  label: string;
+  generatedAt: string;
+  legsJson: string;
+  jointProb: number;
+  combinedFairOdd: number;
+  confidenceLabel: string;
+  totalLegs: number;
+  status: string;
+  resolvedAt?: string | null;
+  hitLegs?: number | null;
+  nearMissLegs?: number | null;
+  resultLabel?: string | null;
+  actualResultsJson?: string | null;
+}
+
+export interface ResolveParlayInput {
+  parlayId: string;
+  hitLegs: number;
+  nearMissLegs: number;
+  actualResultsJson?: string | null;
+}
+
+export interface ResolveParlayOut {
+  success: boolean;
+  parlayId: string;
+  status: string;
+  resultLabel: string;
+  hitLegs: number;
+  nearMissLegs: number;
+}
+
 export type RecalibrationResultBefore = { [key: string]: unknown };
 
 export type RecalibrationResultAfter = { [key: string]: unknown };
@@ -406,4 +457,8 @@ export type LiveRecalibrate400 = {
 
 export type LiveRecalibrate404 = {
   error?: string;
+};
+
+export type DeleteParlay200 = {
+  success?: boolean;
 };

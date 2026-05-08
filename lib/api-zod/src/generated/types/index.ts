@@ -7,6 +7,7 @@
  */
 
 export * from "./calibrationMetricsOut";
+export * from "./deleteParlay200";
 export * from "./healthStatus";
 export * from "./htFtSuggestion";
 export * from "./leagueOut";
@@ -31,6 +32,7 @@ export * from "./modelParametersOut";
 export * from "./modelParametersOutEnsembleWeights";
 export * from "./overUnderSuggestion";
 export * from "./overUnderSuggestionRecommendation";
+export * from "./parlayHistoryItem";
 export * from "./parlayLeg";
 export * from "./parlayLegPickType";
 export * from "./parlayOption";
@@ -40,6 +42,10 @@ export * from "./predictionOut";
 export * from "./recalibrationResult";
 export * from "./recalibrationResultAfter";
 export * from "./recalibrationResultBefore";
+export * from "./resolveParlayInput";
+export * from "./resolveParlayOut";
+export * from "./saveParlayInput";
+export * from "./saveParlayOut";
 export * from "./scannerInput";
 export * from "./scannerRunResult";
 export * from "./scannerRunResultReportsItem";

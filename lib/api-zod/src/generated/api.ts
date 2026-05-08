@@ -429,6 +429,78 @@ export const GetParlaysuggestionResponse = zod.object({
 });
 
 /**
+ * @summary Save a parlay to history
+ */
+export const SaveParlayBody = zod.object({
+  date: zod.string(),
+  label: zod.string(),
+  legsJson: zod.string(),
+  jointProb: zod.number(),
+  combinedFairOdd: zod.number(),
+  confidenceLabel: zod.string(),
+  totalLegs: zod.number(),
+});
+
+export const SaveParlayResponse = zod.object({
+  success: zod.boolean(),
+  parlayId: zod.string(),
+  id: zod.number().optional(),
+});
+
+/**
+ * @summary List saved parlays (history)
+ */
+export const ListParlaysResponseItem = zod.object({
+  id: zod.number(),
+  parlayId: zod.string(),
+  date: zod.string(),
+  label: zod.string(),
+  generatedAt: zod.string(),
+  legsJson: zod.string(),
+  jointProb: zod.number(),
+  combinedFairOdd: zod.number(),
+  confidenceLabel: zod.string(),
+  totalLegs: zod.number(),
+  status: zod.string(),
+  resolvedAt: zod.string().nullish(),
+  hitLegs: zod.number().nullish(),
+  nearMissLegs: zod.number().nullish(),
+  resultLabel: zod.string().nullish(),
+  actualResultsJson: zod.string().nullish(),
+});
+export const ListParlaysResponse = zod.array(ListParlaysResponseItem);
+
+/**
+ * @summary Mark a parlay as hit/near-miss/miss
+ */
+export const ResolveParlayBody = zod.object({
+  parlayId: zod.string(),
+  hitLegs: zod.number(),
+  nearMissLegs: zod.number(),
+  actualResultsJson: zod.string().nullish(),
+});
+
+export const ResolveParlayResponse = zod.object({
+  success: zod.boolean(),
+  parlayId: zod.string(),
+  status: zod.string(),
+  resultLabel: zod.string(),
+  hitLegs: zod.number(),
+  nearMissLegs: zod.number(),
+});
+
+/**
+ * @summary Delete a saved parlay
+ */
+export const DeleteParlayParams = zod.object({
+  parlayId: zod.coerce.string(),
+});
+
+export const DeleteParlayResponse = zod.object({
+  success: zod.boolean().optional(),
+});
+
+/**
  * @summary Get current model parameters
  */
 export const GetModelParametersResponse = zod.object({

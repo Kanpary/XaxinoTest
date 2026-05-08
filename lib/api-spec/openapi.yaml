@@ -193,6 +193,79 @@ paths:
               schema:
                 $ref: "#/components/schemas/ParlayOut"
 
+  /parlays:
+    post:
+      operationId: saveParlay
+      tags: [predictions]
+      summary: Save a parlay to history
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveParlayInput"
+      responses:
+        "200":
+          description: Saved parlay
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaveParlayOut"
+
+    get:
+      operationId: listParlays
+      tags: [predictions]
+      summary: List saved parlays (history)
+      responses:
+        "200":
+          description: Parlay history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ParlayHistoryItem"
+
+  /parlays/resolve:
+    post:
+      operationId: resolveParlay
+      tags: [predictions]
+      summary: Mark a parlay as hit/near-miss/miss
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveParlayInput"
+      responses:
+        "200":
+          description: Resolution result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResolveParlayOut"
+
+  /parlays/{parlayId}:
+    delete:
+      operationId: deleteParlay
+      tags: [predictions]
+      summary: Delete a saved parlay
+      parameters:
+        - name: parlayId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+
   /calibration/parameters:
     get:
       operationId: getModelParameters
@@ -915,6 +988,67 @@ components:
             $ref: "#/components/schemas/ParlayOption"
         totalCandidates: { type: integer }
       required: [generatedAt, date, alternatives, totalCandidates]
+
+    SaveParlayInput:
+      type: object
+      properties:
+        date: { type: string }
+        label: { type: string }
+        legsJson: { type: string }
+        jointProb: { type: number }
+        combinedFairOdd: { type: number }
+        confidenceLabel: { type: string }
+        totalLegs: { type: integer }
+      required: [date, label, legsJson, jointProb, combinedFairOdd, confidenceLabel, totalLegs]
+
+    SaveParlayOut:
+      type: object
+      properties:
+        success: { type: boolean }
+        parlayId: { type: string }
+        id: { type: integer }
+      required: [success, parlayId]
+
+    ParlayHistoryItem:
+      type: object
+      properties:
+        id: { type: integer }
+        parlayId: { type: string }
+        date: { type: string }
+        label: { type: string }
+        generatedAt: { type: string }
+        legsJson: { type: string }
+        jointProb: { type: number }
+        combinedFairOdd: { type: number }
+        confidenceLabel: { type: string }
+        totalLegs: { type: integer }
+        status: { type: string }
+        resolvedAt: { type: string, nullable: true }
+        hitLegs: { type: integer, nullable: true }
+        nearMissLegs: { type: integer, nullable: true }
+        resultLabel: { type: string, nullable: true }
+        actualResultsJson: { type: string, nullable: true }
+      required: [id, parlayId, date, label, generatedAt, legsJson, jointProb, combinedFairOdd, confidenceLabel, totalLegs, status]
+
+    ResolveParlayInput:
+      type: object
+      properties:
+        parlayId: { type: string }
+        hitLegs: { type: integer }
+        nearMissLegs: { type: integer }
+        actualResultsJson: { type: string, nullable: true }
+      required: [parlayId, hitLegs, nearMissLegs]
+
+    ResolveParlayOut:
+      type: object
+      properties:
+        success: { type: boolean }
+        parlayId: { type: string }
+        status: { type: string }
+        resultLabel: { type: string }
+        hitLegs: { type: integer }
+        nearMissLegs: { type: integer }
+      required: [success, parlayId, status, resultLabel, hitLegs, nearMissLegs]
 
     RecalibrationResult:
       type: object

@@ -18,6 +18,7 @@ import type {
 
 import type {
   CalibrationMetricsOut,
+  DeleteParlay200,
   HealthStatus,
   LeagueOut,
   ListPredictionsParams,
@@ -27,9 +28,14 @@ import type {
   LiveRecalibrateInput,
   LiveRecalibrateOut,
   ModelParametersOut,
+  ParlayHistoryItem,
   ParlayOut,
   PredictionOut,
   RecalibrationResult,
+  ResolveParlayInput,
+  ResolveParlayOut,
+  SaveParlayInput,
+  SaveParlayOut,
   ScannerInput,
   ScannerRunResult,
   SyncResultsOut,
@@ -708,6 +714,337 @@ export const useGetParlaysuggestion = <
   TContext
 > => {
   return useMutation(getGetParlaysuggestionMutationOptions(options));
+};
+
+/**
+ * @summary Save a parlay to history
+ */
+export const getSaveParlayUrl = () => {
+  return `/api/parlays`;
+};
+
+export const saveParlay = async (
+  saveParlayInput: SaveParlayInput,
+  options?: RequestInit,
+): Promise<SaveParlayOut> => {
+  return customFetch<SaveParlayOut>(getSaveParlayUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(saveParlayInput),
+  });
+};
+
+export const getSaveParlayMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveParlay>>,
+    TError,
+    { data: BodyType<SaveParlayInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveParlay>>,
+  TError,
+  { data: BodyType<SaveParlayInput> },
+  TContext
+> => {
+  const mutationKey = ["saveParlay"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveParlay>>,
+    { data: BodyType<SaveParlayInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return saveParlay(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveParlayMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveParlay>>
+>;
+export type SaveParlayMutationBody = BodyType<SaveParlayInput>;
+export type SaveParlayMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Save a parlay to history
+ */
+export const useSaveParlay = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveParlay>>,
+    TError,
+    { data: BodyType<SaveParlayInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof saveParlay>>,
+  TError,
+  { data: BodyType<SaveParlayInput> },
+  TContext
+> => {
+  return useMutation(getSaveParlayMutationOptions(options));
+};
+
+/**
+ * @summary List saved parlays (history)
+ */
+export const getListParlaysUrl = () => {
+  return `/api/parlays`;
+};
+
+export const listParlays = async (
+  options?: RequestInit,
+): Promise<ParlayHistoryItem[]> => {
+  return customFetch<ParlayHistoryItem[]>(getListParlaysUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListParlaysQueryKey = () => {
+  return [`/api/parlays`] as const;
+};
+
+export const getListParlaysQueryOptions = <
+  TData = Awaited<ReturnType<typeof listParlays>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listParlays>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListParlaysQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listParlays>>> = ({
+    signal,
+  }) => listParlays({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listParlays>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListParlaysQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listParlays>>
+>;
+export type ListParlaysQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List saved parlays (history)
+ */
+
+export function useListParlays<
+  TData = Awaited<ReturnType<typeof listParlays>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listParlays>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListParlaysQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Mark a parlay as hit/near-miss/miss
+ */
+export const getResolveParlayUrl = () => {
+  return `/api/parlays/resolve`;
+};
+
+export const resolveParlay = async (
+  resolveParlayInput: ResolveParlayInput,
+  options?: RequestInit,
+): Promise<ResolveParlayOut> => {
+  return customFetch<ResolveParlayOut>(getResolveParlayUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(resolveParlayInput),
+  });
+};
+
+export const getResolveParlayMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveParlay>>,
+    TError,
+    { data: BodyType<ResolveParlayInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resolveParlay>>,
+  TError,
+  { data: BodyType<ResolveParlayInput> },
+  TContext
+> => {
+  const mutationKey = ["resolveParlay"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resolveParlay>>,
+    { data: BodyType<ResolveParlayInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return resolveParlay(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResolveParlayMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resolveParlay>>
+>;
+export type ResolveParlayMutationBody = BodyType<ResolveParlayInput>;
+export type ResolveParlayMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Mark a parlay as hit/near-miss/miss
+ */
+export const useResolveParlay = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveParlay>>,
+    TError,
+    { data: BodyType<ResolveParlayInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof resolveParlay>>,
+  TError,
+  { data: BodyType<ResolveParlayInput> },
+  TContext
+> => {
+  return useMutation(getResolveParlayMutationOptions(options));
+};
+
+/**
+ * @summary Delete a saved parlay
+ */
+export const getDeleteParlayUrl = (parlayId: string) => {
+  return `/api/parlays/${parlayId}`;
+};
+
+export const deleteParlay = async (
+  parlayId: string,
+  options?: RequestInit,
+): Promise<DeleteParlay200> => {
+  return customFetch<DeleteParlay200>(getDeleteParlayUrl(parlayId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteParlayMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteParlay>>,
+    TError,
+    { parlayId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteParlay>>,
+  TError,
+  { parlayId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteParlay"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteParlay>>,
+    { parlayId: string }
+  > = (props) => {
+    const { parlayId } = props ?? {};
+
+    return deleteParlay(parlayId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteParlayMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteParlay>>
+>;
+
+export type DeleteParlayMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a saved parlay
+ */
+export const useDeleteParlay = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteParlay>>,
+    TError,
+    { parlayId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteParlay>>,
+  TError,
+  { parlayId: string },
+  TContext
+> => {
+  return useMutation(getDeleteParlayMutationOptions(options));
 };
 
 /**

@@ -3,7 +3,7 @@
  * currently in the "in" (in-progress) state.
  *
  * To avoid hammering ESPN with 64 sequential requests, we fan-out in batches
- * of 12 concurrent requests.
+ * of 8 concurrent requests with a per-league 6-second timeout.
  */
 
 import { LEAGUES } from "../data-sources/leagues";
@@ -32,11 +32,18 @@ function todayAndYesterdayYYYYMMDD(): string[] {
     day: "2-digit",
   });
   const today = brt.format(now).replace(/-/g, "");
-
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const yesterdayStr = brt.format(yesterday).replace(/-/g, "");
-
   return [today, yesterdayStr];
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms),
+    ),
+  ]);
 }
 
 async function checkLeagueForLiveGames(
@@ -48,7 +55,7 @@ async function checkLeagueForLiveGames(
 
   for (const date of dates) {
     try {
-      const events = await fetchScoreboard(league.espnSlug, date);
+      const events = await withTimeout(fetchScoreboard(league.espnSlug, date), 6_000);
       for (const ev of events) {
         if (ev.status.type.state !== "in") continue;
         if (seen.has(ev.id)) continue;
@@ -64,7 +71,6 @@ async function checkLeagueForLiveGames(
         const liveHomeScore = parseInt(home.score ?? "0", 10);
         const liveAwayScore = parseInt(away.score ?? "0", 10);
 
-        // Prefer shortDetail ("45'", "HT", "90+2'") over raw displayClock ("45:00")
         const minuteDisplay =
           ev.status.type.shortDetail && ev.status.type.shortDetail !== ""
             ? ev.status.type.shortDetail
@@ -105,7 +111,7 @@ export async function getLiveGames(): Promise<LiveGame[]> {
   const active = LEAGUES.filter((l) => l.active);
   const dates = todayAndYesterdayYYYYMMDD();
 
-  const BATCH = 12;
+  const BATCH = 8;
   const all: LiveGame[] = [];
 
   for (let i = 0; i < active.length; i += BATCH) {
