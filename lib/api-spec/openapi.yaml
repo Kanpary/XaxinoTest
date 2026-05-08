@@ -3,13 +3,21 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: OMNI-TITANIUM 7.0 – Forensic Engine API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: scanner
+    description: Scanner operations
+  - name: predictions
+    description: Prediction management
+  - name: leagues
+    description: League catalogue
+  - name: calibration
+    description: Model calibration
 paths:
   /healthz:
     get:
@@ -24,6 +32,206 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /scanner/run:
+    post:
+      operationId: runScanner
+      tags: [scanner]
+      summary: Run the fixture scanner
+      description: Scans fixtures for the given date and league IDs, runs the ensemble engine, and persists predictions.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScannerInput"
+      responses:
+        "200":
+          description: Scanner result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScannerRunResult"
+
+  /predictions:
+    get:
+      operationId: listPredictions
+      tags: [predictions]
+      summary: List predictions
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, resolved, all]
+            default: all
+        - name: date
+          in: query
+          required: false
+          description: "Filter by match date (YYYY-MM-DD in Brasilia time). Omit for all dates."
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 500
+      responses:
+        "200":
+          description: List of predictions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PredictionOut"
+
+  /predictions/sync-results:
+    post:
+      operationId: syncPredictionResults
+      tags: [predictions]
+      summary: Sync results from ESPN
+      description: Queries ESPN for completed match scores and resolves pending predictions.
+      responses:
+        "200":
+          description: Sync summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncResultsOut"
+
+  /leagues:
+    get:
+      operationId: listLeagues
+      tags: [leagues]
+      summary: List supported leagues
+      responses:
+        "200":
+          description: League list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeagueOut"
+
+  /scanner/live-recalibrate:
+    post:
+      operationId: liveRecalibrate
+      tags: [scanner]
+      summary: Recalibrate predictions for a live game
+      description: Fetches the current live state from ESPN and re-runs the full 80-method engine to suggest the 3 best final-score predictions given the in-progress score.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LiveRecalibrateInput"
+      responses:
+        "200":
+          description: Live recalibration result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveRecalibrateOut"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "404":
+          description: Fixture not found or not live
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /scanner/live-games:
+    get:
+      operationId: getLiveGames
+      tags: [scanner]
+      summary: List currently in-progress games
+      description: Polls ESPN scoreboards for all active leagues and returns games with state "in" (currently live).
+      responses:
+        "200":
+          description: List of currently live games
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LiveGameOut"
+
+  /scanner/parlay:
+    post:
+      operationId: getParlaysuggestion
+      tags: [scanner]
+      summary: Get parlay (múltipla) suggestion
+      description: Runs the scanner and returns the best 2–5 leg parlay suggestion based on convergence, model agreement, and Markov/Hawkes triple-lock.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScannerInput"
+      responses:
+        "200":
+          description: Parlay suggestion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParlayOut"
+
+  /calibration/parameters:
+    get:
+      operationId: getModelParameters
+      tags: [calibration]
+      summary: Get current model parameters
+      responses:
+        "200":
+          description: Model parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelParametersOut"
+
+  /calibration/metrics:
+    get:
+      operationId: getCalibrationMetrics
+      tags: [calibration]
+      summary: Get calibration metrics
+      responses:
+        "200":
+          description: Calibration metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalibrationMetricsOut"
+
+  /calibration/recalibrate:
+    post:
+      operationId: recalibrateModel
+      tags: [calibration]
+      summary: Trigger model recalibration
+      responses:
+        "200":
+          description: Recalibration result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecalibrationResult"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +242,703 @@ components:
       required:
         - status
 
+    ScannerInput:
+      type: object
+      properties:
+        leagueIds:
+          type: array
+          items:
+            type: string
+          nullable: true
+        date:
+          type: string
+          nullable: true
+          description: "YYYY-MM-DD in Brasilia time. Defaults to today."
+        minEdge:
+          type: number
+          nullable: true
+        minConvergence:
+          type: number
+          nullable: true
+
+    ScannerRunResult:
+      type: object
+      properties:
+        scannedAt:
+          type: string
+        date:
+          type: string
+        fixturesScanned:
+          type: integer
+        singularitiesFound:
+          type: integer
+        inconclusiveCount:
+          type: integer
+        thresholds:
+          type: object
+          additionalProperties: true
+        reports:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      required:
+        - scannedAt
+        - date
+        - fixturesScanned
+        - singularitiesFound
+        - inconclusiveCount
+        - thresholds
+        - reports
+
+    PredictionOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        fixtureId:
+          type: string
+        leagueId:
+          type: string
+        leagueName:
+          type: string
+        homeTeam:
+          type: string
+        awayTeam:
+          type: string
+        kickoffUtc:
+          type: string
+        matchDate:
+          type: string
+          nullable: true
+        primaryHome:
+          type: integer
+        primaryAway:
+          type: integer
+        primaryProb:
+          type: number
+        pred2Home:
+          type: integer
+          nullable: true
+        pred2Away:
+          type: integer
+          nullable: true
+        pred2Prob:
+          type: number
+          nullable: true
+        pred3Home:
+          type: integer
+          nullable: true
+        pred3Away:
+          type: integer
+          nullable: true
+        pred3Prob:
+          type: number
+          nullable: true
+        hedgeScoresJson:
+          type: string
+          nullable: true
+        topNScoresJson:
+          type: string
+          nullable: true
+        assertivenessReal:
+          type: number
+        ensembleConvergence:
+          type: number
+        currentOdd:
+          type: number
+          nullable: true
+        fairValue:
+          type: number
+          nullable: true
+        edgePct:
+          type: number
+          nullable: true
+        zScore:
+          type: number
+        verdict:
+          type: string
+        forensicVerdict:
+          type: string
+          nullable: true
+        motorsActivated:
+          type: string
+          nullable: true
+        xrayDriver:
+          type: string
+          nullable: true
+        status:
+          type: string
+        actualHome:
+          type: integer
+          nullable: true
+        actualAway:
+          type: integer
+          nullable: true
+        hitExact:
+          type: boolean
+          nullable: true
+        hitExact2:
+          type: boolean
+          nullable: true
+        hitExact3:
+          type: boolean
+          nullable: true
+        hitAnyExact:
+          type: boolean
+          nullable: true
+        hitWithinOne:
+          type: boolean
+          nullable: true
+        isLive:
+          type: boolean
+          nullable: true
+        liveMinute:
+          type: integer
+          nullable: true
+        liveHomeScore:
+          type: integer
+          nullable: true
+        liveAwayScore:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+        resolvedAt:
+          type: string
+          nullable: true
+      required:
+        - id
+        - fixtureId
+        - leagueId
+        - leagueName
+        - homeTeam
+        - awayTeam
+        - kickoffUtc
+        - primaryHome
+        - primaryAway
+        - primaryProb
+        - assertivenessReal
+        - ensembleConvergence
+        - zScore
+        - verdict
+        - status
+        - createdAt
+
+    SyncResultsOut:
+      type: object
+      properties:
+        checked:
+          type: integer
+        resolved:
+          type: integer
+        stillPending:
+          type: integer
+        autoRecalibrated:
+          type: boolean
+      required:
+        - checked
+        - resolved
+        - stillPending
+        - autoRecalibrated
+
+    LeagueOut:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        country:
+          type: string
+        espnSlug:
+          type: string
+        active:
+          type: boolean
+        confederation:
+          type: string
+      required:
+        - id
+        - name
+        - country
+        - espnSlug
+        - active
+        - confederation
+
+    ModelParametersOut:
+      type: object
+      properties:
+        dixonColesTau:
+          type: number
+        weightedFormXi:
+          type: number
+        bivariateRho:
+          type: number
+        homeAdvantage:
+          type: number
+        ensembleWeights:
+          type: object
+          properties:
+            dixonColes:
+              type: number
+            bivariatePoisson:
+              type: number
+            eloPoisson:
+              type: number
+            weightedForm:
+              type: number
+          required:
+            - dixonColes
+            - bivariatePoisson
+            - eloPoisson
+            - weightedForm
+        lastRecalibration:
+          type: string
+          nullable: true
+        predictionsSinceLastCalibration:
+          type: integer
+        totalResolvedPredictions:
+          type: integer
+      required:
+        - dixonColesTau
+        - weightedFormXi
+        - bivariateRho
+        - homeAdvantage
+        - ensembleWeights
+        - predictionsSinceLastCalibration
+        - totalResolvedPredictions
+
+    TrendPoint:
+      type: object
+      properties:
+        bucketLabel:
+          type: string
+        exactRate:
+          type: number
+        plusMinusOneRate:
+          type: number
+        sampleSize:
+          type: integer
+      required:
+        - bucketLabel
+        - exactRate
+        - plusMinusOneRate
+        - sampleSize
+
+    CalibrationMetricsOut:
+      type: object
+      properties:
+        totalPredictions:
+          type: integer
+        resolvedCount:
+          type: integer
+        pendingCount:
+          type: integer
+        exactHitRate:
+          type: number
+        exactHitCount:
+          type: integer
+        anyExactHitCount:
+          type: integer
+        anyExactHitRate:
+          type: number
+        plusMinusOneHitRate:
+          type: number
+        plusMinusOneHitCount:
+          type: integer
+        brierScore:
+          type: number
+          nullable: true
+        recentTrend:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrendPoint"
+        bestLeague:
+          type: string
+          nullable: true
+        worstLeague:
+          type: string
+          nullable: true
+      required:
+        - totalPredictions
+        - resolvedCount
+        - pendingCount
+        - exactHitRate
+        - exactHitCount
+        - anyExactHitCount
+        - anyExactHitRate
+        - plusMinusOneHitRate
+        - plusMinusOneHitCount
+        - recentTrend
+
+    LiveRecalibrateInput:
+      type: object
+      properties:
+        fixtureId:
+          type: string
+          description: ESPN fixture/event ID
+        leagueId:
+          type: string
+          description: Internal league ID (e.g. "brasileirao-serie-a")
+      required:
+        - fixtureId
+        - leagueId
+
+    LiveRecalibratePick:
+      type: object
+      properties:
+        home:
+          type: integer
+        away:
+          type: integer
+        prob:
+          type: number
+          description: Probability of this exact scoreline for the remaining time
+        finalProb:
+          type: number
+          description: Probability of this as the final score from current state
+        confidencePct:
+          type: number
+          description: Model confidence 0-100
+        label:
+          type: string
+          description: "Pick label: OURO / PRATA / BRONZE"
+      required:
+        - home
+        - away
+        - prob
+        - finalProb
+        - confidencePct
+        - label
+
+    OverUnderSuggestion:
+      type: object
+      properties:
+        line:
+          type: number
+          description: "Goal line (1.5, 2.5, 3.5)"
+        recommendation:
+          type: string
+          enum: [OVER, UNDER]
+        prob:
+          type: number
+          description: Model probability for this recommendation
+      required:
+        - line
+        - recommendation
+        - prob
+
+    HtFtSuggestion:
+      type: object
+      properties:
+        ht:
+          type: string
+          description: "Half-time result: 1 (home), X (draw), 2 (away)"
+        ft:
+          type: string
+          description: "Full-time result: 1 (home), X (draw), 2 (away)"
+        label:
+          type: string
+          description: "Human-readable label e.g. Casa/Empate"
+        prob:
+          type: number
+          description: Model probability for this HT/FT combination
+      required:
+        - ht
+        - ft
+        - label
+        - prob
+
+    LiveRecalibrateOut:
+      type: object
+      properties:
+        fixtureId:
+          type: string
+        homeTeam:
+          type: string
+        awayTeam:
+          type: string
+        leagueName:
+          type: string
+        liveMinute:
+          type: integer
+        liveHomeScore:
+          type: integer
+        liveAwayScore:
+          type: integer
+        top3:
+          type: array
+          items:
+            $ref: "#/components/schemas/LiveRecalibratePick"
+        assertiveness:
+          type: number
+        convergence:
+          type: number
+        zScore:
+          type: number
+        analysisContext:
+          type: string
+          description: Brief natural language explanation of the recommendation
+        recalibratedAt:
+          type: string
+        bttsProb:
+          type: number
+          description: Both-teams-to-score probability (M79 structural + Monte Carlo blend)
+        overUnderSuggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/OverUnderSuggestion"
+          description: Over/Under goal line suggestions sorted by model confidence
+        htFtSuggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/HtFtSuggestion"
+          description: Top 3 HT/FT market suggestions sorted by model probability
+        isLive:
+          type: boolean
+          description: Whether the game was in-progress at recalibration time
+        liveStats:
+          type: object
+          nullable: true
+          description: Real-time match statistics fetched from ESPN (only present for live games)
+          properties:
+            homeXg:
+              type: number
+              nullable: true
+              description: Expected goals for home team (direct from ESPN or estimated from shots)
+            awayXg:
+              type: number
+              nullable: true
+              description: Expected goals for away team (direct from ESPN or estimated from shots)
+            homeShots:
+              type: integer
+              description: Total shots by home team
+            awayShots:
+              type: integer
+              description: Total shots by away team
+            homeShotsOnTarget:
+              type: integer
+              description: Shots on target by home team
+            awayShotsOnTarget:
+              type: integer
+              description: Shots on target by away team
+            homeRedCards:
+              type: integer
+              description: Red cards received by home team
+            awayRedCards:
+              type: integer
+              description: Red cards received by away team
+            homeYellowCards:
+              type: integer
+              description: Yellow cards received by home team
+            awayYellowCards:
+              type: integer
+              description: Yellow cards received by away team
+            homePossession:
+              type: number
+              nullable: true
+              description: Ball possession percentage for home team
+            awayPossession:
+              type: number
+              nullable: true
+              description: Ball possession percentage for away team
+        bettingMarkets:
+          type: object
+          nullable: true
+          description: Real bookmaker odds from The-Odds-API (requires ODDS_API_KEY)
+          properties:
+            bookmaker:
+              type: string
+            oneX2:
+              type: object
+              nullable: true
+              properties:
+                homeOdd: { type: number }
+                drawOdd: { type: number }
+                awayOdd: { type: number }
+            overUnder:
+              type: array
+              nullable: true
+              items:
+                type: object
+                properties:
+                  line: { type: number }
+                  overOdd: { type: number }
+                  underOdd: { type: number }
+            btts:
+              type: object
+              nullable: true
+              properties:
+                yesOdd: { type: number }
+                noOdd: { type: number }
+            exactScore:
+              type: array
+              nullable: true
+              items:
+                type: object
+                properties:
+                  score: { type: string }
+                  odd: { type: number }
+            htFt:
+              type: array
+              nullable: true
+              items:
+                type: object
+                properties:
+                  ht: { type: string }
+                  ft: { type: string }
+                  odd: { type: number }
+            handicap:
+              type: array
+              nullable: true
+              items:
+                type: object
+                properties:
+                  spread: { type: number }
+                  homeOdd: { type: number }
+                  awayOdd: { type: number }
+            edgeHighlights:
+              type: array
+              nullable: true
+              items:
+                type: object
+                properties:
+                  market: { type: string }
+                  value: { type: string }
+                  modelProb: { type: number }
+                  marketOdd: { type: number }
+                  edgePct: { type: number }
+      required:
+        - fixtureId
+        - homeTeam
+        - awayTeam
+        - leagueName
+        - liveMinute
+        - liveHomeScore
+        - liveAwayScore
+        - top3
+        - assertiveness
+        - convergence
+        - zScore
+        - analysisContext
+        - recalibratedAt
+        - bttsProb
+        - overUnderSuggestions
+        - htFtSuggestions
+        - isLive
+
+    LiveGameOut:
+      type: object
+      properties:
+        fixtureId:
+          type: string
+        leagueId:
+          type: string
+        leagueName:
+          type: string
+        espnSlug:
+          type: string
+        homeTeam:
+          type: string
+        awayTeam:
+          type: string
+        liveMinute:
+          type: string
+        liveHomeScore:
+          type: integer
+        liveAwayScore:
+          type: integer
+        statusDetail:
+          type: string
+      required:
+        - fixtureId
+        - leagueId
+        - leagueName
+        - espnSlug
+        - homeTeam
+        - awayTeam
+        - liveMinute
+        - liveHomeScore
+        - liveAwayScore
+        - statusDetail
+
+    ParlayLeg:
+      type: object
+      properties:
+        fixtureId: { type: string }
+        leagueId: { type: string }
+        leagueName: { type: string }
+        homeTeam: { type: string }
+        awayTeam: { type: string }
+        kickoffBrasilia: { type: string }
+        pick: { type: string, description: "Human-readable pick, e.g. '1-0' or 'OVER 2.5 gols'" }
+        pickType:
+          type: string
+          enum: [exact_score, btts, over_under, "1x2"]
+        prob: { type: number }
+        fairOdd: { type: number }
+        convergence: { type: number }
+        zScore: { type: number }
+        markovAgrees: { type: boolean }
+        hawkesAgrees: { type: boolean }
+      required: [fixtureId, leagueId, leagueName, homeTeam, awayTeam, kickoffBrasilia, pick, pickType, prob, fairOdd, convergence, zScore, markovAgrees, hawkesAgrees]
+
+    ParlayOption:
+      type: object
+      properties:
+        label: { type: string }
+        legs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParlayLeg"
+        jointProb: { type: number }
+        combinedFairOdd: { type: number }
+        confidenceLabel:
+          type: string
+          enum: [ALTA, MÉDIA, BAIXA]
+        note: { type: string }
+      required: [label, legs, jointProb, combinedFairOdd, confidenceLabel, note]
+
+    ParlayOut:
+      type: object
+      properties:
+        generatedAt: { type: string }
+        date: { type: string }
+        recommended:
+          nullable: true
+          oneOf:
+            - $ref: "#/components/schemas/ParlayOption"
+            - type: "null"
+        alternatives:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParlayOption"
+        totalCandidates: { type: integer }
+      required: [generatedAt, date, alternatives, totalCandidates]
+
+    RecalibrationResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        predictionsUsed:
+          type: integer
+        before:
+          type: object
+          additionalProperties: true
+        after:
+          type: object
+          additionalProperties: true
+        brierBefore:
+          type: number
+          nullable: true
+        brierAfter:
+          type: number
+          nullable: true
+        notes:
+          type: array
+          items:
+            type: string
+        error:
+          type: string
+          nullable: true

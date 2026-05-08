@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Score Oracle"
+version = "1.0.0"
+id = "artifacts/omni-titanium"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 5173
+
+[services.development]
+run = "pnpm --filter @workspace/omni-titanium run dev"
+
+[services.env]
+PORT = "5173"
+BASE_PATH = "/"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/omni-titanium", "run", "build" ]
+publicDir = "artifacts/omni-titanium/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
