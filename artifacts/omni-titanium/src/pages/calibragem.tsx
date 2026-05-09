@@ -153,10 +153,10 @@ export default function CalibragemPage() {
           {params ? (
             <div className="space-y-3">
               {[
-                { label: "Dixon-Coles τ", value: params.dixonColesTau.toFixed(4) },
-                { label: "Form decay ξ", value: params.weightedFormXi.toFixed(4) },
-                { label: "Bivariate ρ", value: params.bivariateRho.toFixed(4) },
-                { label: "Home advantage", value: params.homeAdvantage.toFixed(4) },
+                { label: "Dixon-Coles τ", value: (params.dixonColesTau ?? 0).toFixed(4) },
+                { label: "Form decay ξ", value: (params.weightedFormXi ?? 0).toFixed(4) },
+                { label: "Bivariate ρ", value: (params.bivariateRho ?? 0).toFixed(4) },
+                { label: "Home advantage", value: (params.homeAdvantage ?? 0).toFixed(4) },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between items-center">
                   <span className="text-[11px] text-muted-foreground">{label}</span>
@@ -168,10 +168,10 @@ export default function CalibragemPage() {
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2.5">Pesos ensemble</p>
                 <div className="space-y-2">
                   {[
-                    { label: "Dixon-Coles", value: params.ensembleWeights.dixonColes, color: "bg-primary" },
-                    { label: "Bivariate", value: params.ensembleWeights.bivariatePoisson, color: "bg-accent" },
-                    { label: "Elo-Poisson", value: params.ensembleWeights.eloPoisson, color: "bg-destructive/70" },
-                    { label: "Form", value: params.ensembleWeights.weightedForm, color: "bg-muted-foreground" },
+                    { label: "Dixon-Coles", value: params.ensembleWeights?.dixonColes ?? 0, color: "bg-primary" },
+                    { label: "Bivariate", value: params.ensembleWeights?.bivariatePoisson ?? 0, color: "bg-accent" },
+                    { label: "Elo-Poisson", value: params.ensembleWeights?.eloPoisson ?? 0, color: "bg-destructive/70" },
+                    { label: "Form", value: params.ensembleWeights?.weightedForm ?? 0, color: "bg-muted-foreground" },
                   ].map(({ label, value, color }) => (
                     <div key={label}>
                       <div className="flex justify-between text-[10px] mb-1">
