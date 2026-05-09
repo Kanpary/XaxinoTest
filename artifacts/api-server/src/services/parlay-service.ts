@@ -71,41 +71,55 @@ export interface ParlayCandidate {
 function pickTypeFromReport(c: ParlayCandidate): { pick: string; pickType: ParlayLeg["pickType"]; prob: number } {
   const { primary, bttsProb, mcStats, convergence } = c;
 
-  // Prefer exact score when confidence is high (convergence >= 0.75, prob >= 0.12)
-  if (convergence >= 0.75 && primary.prob >= 0.12) {
-    return {
-      pick: `${primary.home}–${primary.away}`,
-      pickType: "exact_score",
-      prob: primary.prob,
-    };
+  // Build all candidate markets and score each by effective probability
+  const candidates: Array<{ pick: string; pickType: ParlayLeg["pickType"]; prob: number; score: number }> = [];
+
+  // Exact score: only include when confidence is meaningful
+  if (primary.prob >= 0.08) {
+    const bonus = convergence >= 0.75 && primary.prob >= 0.12 ? 0.05 : 0;
+    candidates.push({ pick: `${primary.home}–${primary.away}`, pickType: "exact_score", prob: primary.prob, score: primary.prob + bonus });
   }
 
-  // Fall back to BTTS when probability is strong (>= 0.62 or <= 0.35)
+  // BTTS SIM / NÃO
   if (bttsProb !== undefined) {
-    if (bttsProb >= 0.62) return { pick: "BTTS SIM", pickType: "btts", prob: bttsProb };
-    if (bttsProb <= 0.35) return { pick: "BTTS NÃO", pickType: "btts", prob: 1 - bttsProb };
+    if (bttsProb >= 0.52) {
+      candidates.push({ pick: "BTTS SIM", pickType: "btts", prob: bttsProb, score: bttsProb });
+    } else {
+      const noProb = 1 - bttsProb;
+      candidates.push({ pick: "BTTS NÃO", pickType: "btts", prob: noProb, score: noProb });
+    }
   }
 
   // Over/Under 2.5
   if (mcStats) {
-    if (mcStats.over25 >= 0.62) return { pick: "OVER 2.5 gols", pickType: "over_under", prob: mcStats.over25 };
-    if (mcStats.over25 <= 0.38) return { pick: "UNDER 2.5 gols", pickType: "over_under", prob: 1 - mcStats.over25 };
+    if (mcStats.over25 >= 0.50) {
+      candidates.push({ pick: "OVER 2.5 gols", pickType: "over_under", prob: mcStats.over25, score: mcStats.over25 });
+    } else {
+      const underProb = 1 - mcStats.over25;
+      candidates.push({ pick: "UNDER 2.5 gols", pickType: "over_under", prob: underProb, score: underProb });
+    }
 
-    // 1X2 when skewed enough
-    const max = Math.max(mcStats.homeWinProb, mcStats.drawProb, mcStats.awayWinProb);
-    if (max >= 0.60) {
-      if (mcStats.homeWinProb === max) return { pick: "Casa (1)", pickType: "1x2", prob: mcStats.homeWinProb };
-      if (mcStats.drawProb === max) return { pick: "Empate (X)", pickType: "1x2", prob: mcStats.drawProb };
-      return { pick: "Fora (2)", pickType: "1x2", prob: mcStats.awayWinProb };
+    // 1X2
+    const max1x2 = Math.max(mcStats.homeWinProb, mcStats.drawProb, mcStats.awayWinProb);
+    if (max1x2 >= 0.45) {
+      if (mcStats.homeWinProb === max1x2) {
+        candidates.push({ pick: "Casa (1)", pickType: "1x2", prob: mcStats.homeWinProb, score: mcStats.homeWinProb });
+      } else if (mcStats.drawProb === max1x2) {
+        candidates.push({ pick: "Empate (X)", pickType: "1x2", prob: mcStats.drawProb, score: mcStats.drawProb });
+      } else {
+        candidates.push({ pick: "Fora (2)", pickType: "1x2", prob: mcStats.awayWinProb, score: mcStats.awayWinProb });
+      }
     }
   }
 
-  // Fallback: exact score
-  return {
-    pick: `${primary.home}–${primary.away}`,
-    pickType: "exact_score",
-    prob: primary.prob,
-  };
+  if (candidates.length === 0) {
+    return { pick: `${primary.home}–${primary.away}`, pickType: "exact_score", prob: primary.prob };
+  }
+
+  // Pick the market with the highest effective score — fully dynamic, no hard-coded market priority
+  candidates.sort((a, b) => b.score - a.score);
+  const best = candidates[0]!;
+  return { pick: best.pick, pickType: best.pickType, prob: best.prob };
 }
 
 function markovAgrees(c: ParlayCandidate): boolean {

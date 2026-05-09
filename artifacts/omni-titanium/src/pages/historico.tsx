@@ -5,7 +5,7 @@ import {
   getGetCalibrationMetricsQueryKey,
   getGetModelParametersQueryKey,
 } from "@workspace/api-client-react";
-import { useMemo, useState, useCallback, useRef } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AoVivoPanel } from "../components/LivePanel";
 
@@ -47,6 +47,57 @@ export default function HistoricoPage() {
   );
   const isLoading = loadingAll || (Boolean(dateFilter) && loadingDate);
   const { data: metrics } = useGetCalibrationMetrics();
+
+  // Auto-sync results when the page first loads (silently, non-blocking)
+  const autoSyncDone = useRef(false);
+  useEffect(() => {
+    if (autoSyncDone.current) return;
+    autoSyncDone.current = true;
+    // Small delay to let page data load first
+    const timer = setTimeout(() => {
+      setSyncState({ active: true, checked: 0, resolved: 0, total: 0, current: "Auto-sincronizando…" });
+      const es = new EventSource("/api/predictions/sync-results/stream");
+      esRef.current = es;
+      es.onmessage = (ev) => {
+        try {
+          const data = JSON.parse(ev.data);
+          if (data.type === "heartbeat") return;
+          if (data.type === "progress") {
+            setSyncState((prev) => ({
+              ...prev,
+              checked: data.checked,
+              resolved: data.resolved,
+              total: data.total,
+              current: data.current,
+              lastScore: data.score ?? prev.lastScore,
+            }));
+            if (data.score) {
+              void queryClient.invalidateQueries({ queryKey: getListPredictionsQueryKey() });
+            }
+            return;
+          }
+          if (data.type === "done") {
+            setSyncState({ active: false, checked: data.checked, resolved: data.resolved, total: data.total ?? data.checked, current: `${data.resolved} resolvidos` });
+            es.close();
+            void queryClient.invalidateQueries({ queryKey: getListPredictionsQueryKey() });
+            void queryClient.invalidateQueries({ queryKey: getGetCalibrationMetricsQueryKey() });
+            void queryClient.invalidateQueries({ queryKey: getGetModelParametersQueryKey() });
+            return;
+          }
+          if (data.type === "error") {
+            setSyncState((prev) => ({ ...prev, active: false, error: data.message }));
+            es.close();
+          }
+        } catch { /* malformed JSON */ }
+      };
+      es.onerror = () => {
+        setSyncState((prev) => ({ ...prev, active: false, error: prev.checked === 0 ? undefined : prev.error }));
+        es.close();
+        void queryClient.invalidateQueries({ queryKey: getListPredictionsQueryKey() });
+      };
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [queryClient]);
 
   const handleSync = useCallback(() => {
     if (sync.active) return;

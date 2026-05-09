@@ -11,7 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AoVivoPanel, LiveRecalibratePanel } from "../components/LivePanel";
 
 const BOOT_LINES = [
-  "Bootstrapping Aposta Mestre V6 — 80 métodos profissionais...",
+  "Bootstrapping Aposta Mestre V7 — 110 métodos profissionais...",
   // Original 30
   "[01] Poisson independente (baseline)... OK",
   "[02] Dixon-Coles τ (low-score correction)... OK",
@@ -100,7 +100,7 @@ const BOOT_LINES = [
   "Market Blend — Canal BTTS: ajustando região ambas-marcam...",
   "Score Gravity prior (6% empirical regulariser)... OK",
   "X-RAY — 13 anomaly detectors... OK",
-  "Meta-Ensemble (Stacking L2) — fundindo 80 modelos... OK",
+  "Meta-Ensemble (Stacking L2) — fundindo 110 modelos... OK",
   "Monte Carlo adaptativo (15K–120K iterações)... OK",
   "BMA convergência ponderada... OK",
   "Extrapolação de singularidades concluída.",

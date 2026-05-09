@@ -1,7 +1,7 @@
 /**
- * Scanner orchestrator — Aposta Mestre v6 (80 métodos profissionais).
+ * Scanner orchestrator — Aposta Mestre v7 (110 métodos profissionais).
  *
- * Integrates 80 professional exact-score prediction methods (30 original + 50 new):
+ * Integrates 110 professional exact-score prediction methods (30 original + 50 new + 30 advanced v2):
  *
  * STATISTICAL MODELS (ensemble):
  *  1. Dixon-Coles (τ correction for low scores)
@@ -853,6 +853,27 @@ export function scanFixture(input: ScannerFixtureInput, thresholds: ScannerThres
   // Apply advanced-v2 multiplier with 40% weight blend (keeping 60% existing lambda)
   formLambdas.lambdaHome = Math.max(0.1, Math.min(8, formLambdas.lambdaHome * (0.60 + 0.40 * advancedV2Result.lambdaHomeMultiplier)));
   formLambdas.lambdaAway = Math.max(0.1, Math.min(8, formLambdas.lambdaAway * (0.60 + 0.40 * advancedV2Result.lambdaAwayMultiplier)));
+
+  // ── Low/Mid-goal league specialization ───────────────────────────────────
+  // Leagues with avgGoals < 2.3 are empirically tight — calibrate lambda down
+  // so the engine favours UNDER 2.5 and BTTS NÃO correctly, avoiding over-
+  // prediction of total goals in defensive competitions.
+  // Mid-goal leagues (2.3–2.59) get a lighter dampener.
+  {
+    const ag = input.league.avgGoals;
+    let leagueTierMult = 1.0;
+    if (ag < 2.3) {
+      // Low-goal league (e.g. Venezuela, CAF, Bolivia): strong dampener
+      leagueTierMult = 0.90;
+    } else if (ag < 2.6) {
+      // Mid-goal league (e.g. Brasileirão Série B, Chilean, Peruvian): mild dampener
+      leagueTierMult = 0.95;
+    }
+    if (leagueTierMult < 1.0) {
+      formLambdas.lambdaHome = Math.max(0.1, formLambdas.lambdaHome * leagueTierMult);
+      formLambdas.lambdaAway = Math.max(0.1, formLambdas.lambdaAway * leagueTierMult);
+    }
+  }
 
   // ── Live mode ─────────────────────────────────────────────────────────────
   const liveState = input.liveState;
