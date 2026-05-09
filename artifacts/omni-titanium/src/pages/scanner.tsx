@@ -225,7 +225,8 @@ export default function ScannerPage() {
   const [topFilter, setTopFilter] = useState(false);
 
   const { mutateAsync: runScanner } = useRunScanner();
-  const { data: leagues = [] } = useListLeagues();
+  const { data: leaguesRaw } = useListLeagues();
+  const leagues = Array.isArray(leaguesRaw) ? leaguesRaw : [];
   const queryClient = useQueryClient();
 
   const allLeagueIds = useMemo(() => leagues.map((l) => l.id), [leagues]);
