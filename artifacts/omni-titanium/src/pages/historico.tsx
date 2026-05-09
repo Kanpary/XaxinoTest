@@ -38,13 +38,15 @@ export default function HistoricoPage() {
 
   const queryClient = useQueryClient();
   // Fetch all predictions (no date filter) for building the date selector list.
-  const { data: allRaw = [], isLoading: loadingAll } = useListPredictions({ status: apiStatus, limit: 500 });
+  const { data: allRawData, isLoading: loadingAll } = useListPredictions({ status: apiStatus, limit: 500 });
+  const allRaw = Array.isArray(allRawData) ? allRawData : [];
   // When a date is selected, re-fetch server-side filtered results for that specific date.
   const dateParams = { status: apiStatus, date: dateFilter || undefined, limit: 500 };
-  const { data: dateRaw = [], isLoading: loadingDate } = useListPredictions(
+  const { data: dateRawData, isLoading: loadingDate } = useListPredictions(
     dateParams,
     { query: { enabled: Boolean(dateFilter), queryKey: getListPredictionsQueryKey(dateParams) } },
   );
+  const dateRaw = Array.isArray(dateRawData) ? dateRawData : [];
   const isLoading = loadingAll || (Boolean(dateFilter) && loadingDate);
   const { data: metrics } = useGetCalibrationMetrics();
 
