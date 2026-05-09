@@ -178,7 +178,8 @@ function ParlayOptionCard({
 
 function HistoryTab() {
   const qc = useQueryClient();
-  const { data: history = [], isLoading } = useListParlays();
+  const { data: historyRaw, isLoading } = useListParlays();
+  const history = Array.isArray(historyRaw) ? historyRaw : [];
   const { mutateAsync: resolveParlay } = useResolveParlay();
   const { mutateAsync: deleteParlay } = useDeleteParlay();
   const [resolvingId, setResolvingId] = useState<string | null>(null);
@@ -359,7 +360,8 @@ export default function MultiplaPage() {
   const [activeTab, setActiveTab] = useState<"gerar" | "historico">("gerar");
   const [savingOption, setSavingOption] = useState<string | null>(null);
 
-  const { data: leagues = [] } = useListLeagues();
+  const { data: leaguesRaw } = useListLeagues();
+  const leagues = Array.isArray(leaguesRaw) ? leaguesRaw : [];
   const { mutateAsync: getParlay } = useGetParlaysuggestion();
   const { mutateAsync: saveParlay } = useSaveParlay();
   const qc = useQueryClient();
