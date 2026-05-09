@@ -488,9 +488,11 @@ export function LiveGameCard({ game }: { game: LiveGameOut }) {
 }
 
 export function AoVivoPanel() {
-  const { data: games = [], isLoading, dataUpdatedAt, refetch, isFetching } = useGetLiveGames({
+  const { data: rawGames, isLoading, dataUpdatedAt, refetch, isFetching } = useGetLiveGames({
     query: { refetchInterval: 30_000, queryKey: getGetLiveGamesQueryKey() },
   });
+  // Guard against unexpected non-array shapes (e.g. error objects from the cache)
+  const games = Array.isArray(rawGames) ? rawGames : [];
 
   const lastUpdate = dataUpdatedAt
     ? new Date(dataUpdatedAt).toLocaleTimeString("pt-BR")
@@ -547,7 +549,7 @@ export function AoVivoPanel() {
 
       {games.length > 0 && (
         <div className="px-4 py-2 border-t border-border/30 text-[10px] text-muted-foreground/40">
-          Recalibração usa todos os 80 métodos + placares em tempo real ESPN · atualiza a cada 30 s
+          Recalibração usa todos os 110 métodos + placares em tempo real ESPN · atualiza a cada 30 s
         </div>
       )}
     </div>
